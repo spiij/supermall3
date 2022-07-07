@@ -30,5 +30,7 @@ export default {
     flex-wrap: wrap;
     text-align: center;
     justify-content: space-around;
+
+    padding: 2px;
   }
 </style>

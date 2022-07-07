@@ -1,115 +1,28 @@
 <template>
 <div id="home">
   <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-  <home-swiper :banners="banners"></home-swiper>
-  <recommend-view :recommends="recommends"/>
-  <feature-view/>
-  <tab-control class="tab-control" :title="['流行', '精选', '新款']"/>
+  <tab-control class="tab-control tabcontrol"
+               :title="['流行', '精选', '新款']"
+               @itemClick="itemClick"
+               v-show="isFixed" ref="tabControl1"/>
 
-  <goods-list :goods="goods['pop'].list"/>
+  <scroll class="home-scroll"
+          ref="scroll"
+          :probe-type="3"
+          @scroll="scroll"
+          @pullingUp="pullingUp" :pull-up-load="true">
+    <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"></home-swiper>
+    <recommend-view :recommends="recommends"/>
+    <feature-view/>
+    <tab-control class="tab-control"
+                 :title="['流行', '精选', '新款']"
+                 @itemClick="itemClick"
+                 ref="tab"/>
 
-  <ul>
-    <li>列表1</li>
-    <li>列表2</li>
-    <li>列表3</li>
-    <li>列表4</li>
-    <li>列表5</li>
-    <li>列表6</li>
-    <li>列表7</li>
-    <li>列表8</li>
-    <li>列表9</li>
-    <li>列表10</li>
-    <li>列表11</li>
-    <li>列表12</li>
-    <li>列表13</li>
-    <li>列表14</li>
-    <li>列表15</li>
-    <li>列表16</li>
-    <li>列表17</li>
-    <li>列表18</li>
-    <li>列表19</li>
-    <li>列表20</li>
-    <li>列表21</li>
-    <li>列表22</li>
-    <li>列表23</li>
-    <li>列表24</li>
-    <li>列表25</li>
-    <li>列表26</li>
-    <li>列表27</li>
-    <li>列表28</li>
-    <li>列表29</li>
-    <li>列表30</li>
-    <li>列表31</li>
-    <li>列表32</li>
-    <li>列表33</li>
-    <li>列表34</li>
-    <li>列表35</li>
-    <li>列表36</li>
-    <li>列表37</li>
-    <li>列表38</li>
-    <li>列表39</li>
-    <li>列表40</li>
-    <li>列表41</li>
-    <li>列表42</li>
-    <li>列表43</li>
-    <li>列表44</li>
-    <li>列表45</li>
-    <li>列表46</li>
-    <li>列表47</li>
-    <li>列表48</li>
-    <li>列表49</li>
-    <li>列表50</li>
-    <li>列表51</li>
-    <li>列表52</li>
-    <li>列表53</li>
-    <li>列表54</li>
-    <li>列表55</li>
-    <li>列表56</li>
-    <li>列表57</li>
-    <li>列表58</li>
-    <li>列表59</li>
-    <li>列表60</li>
-    <li>列表61</li>
-    <li>列表62</li>
-    <li>列表63</li>
-    <li>列表64</li>
-    <li>列表65</li>
-    <li>列表66</li>
-    <li>列表67</li>
-    <li>列表68</li>
-    <li>列表69</li>
-    <li>列表70</li>
-    <li>列表71</li>
-    <li>列表72</li>
-    <li>列表73</li>
-    <li>列表74</li>
-    <li>列表75</li>
-    <li>列表76</li>
-    <li>列表77</li>
-    <li>列表78</li>
-    <li>列表79</li>
-    <li>列表80</li>
-    <li>列表81</li>
-    <li>列表82</li>
-    <li>列表83</li>
-    <li>列表84</li>
-    <li>列表85</li>
-    <li>列表86</li>
-    <li>列表87</li>
-    <li>列表88</li>
-    <li>列表89</li>
-    <li>列表90</li>
-    <li>列表91</li>
-    <li>列表92</li>
-    <li>列表93</li>
-    <li>列表94</li>
-    <li>列表95</li>
-    <li>列表96</li>
-    <li>列表97</li>
-    <li>列表98</li>
-    <li>列表99</li>
-    <li>列表100</li>
-  </ul>
+    <goods-list :goods="goods[currentType].list"/>
+  </scroll>
+
+  <back-top @click.native="backClick" v-show="isShow"/>
 </div>
 </template>
 
@@ -121,12 +34,15 @@ import RecommendView from "./childComps/RecommendView";
 import FeatureView from "./childComps/FeatureView";
 import TabControl from "../../components/content/tabControl/TabControl";
 
+import Scroll from "../../components/common/scroll/Scroll";
+import BackTop from "../../components/content/backTop/BackTop";
+
 import GoodsList from "../../components/content/goods/GoodsList";
 // import GoodsListItem from "../../components/content/goods/GoodsListItem";
 
 import { getHomeMultiData, getHomeGoods } from "../../network/home";
 
-
+import { debounce } from "../../common/utils";
 
 export default {
   name: "Home",
@@ -140,6 +56,8 @@ export default {
     TabControl,
     GoodsList,
     // GoodsListItem
+    Scroll,
+    BackTop
   },
   data(){
     return {
@@ -150,7 +68,11 @@ export default {
         'pop': {page: 0, list: []},
         'new': {page: 0, list: []},
         'sell': {page: 0, list: []}
-      }
+      },
+      currentType: 'pop',
+      isShow: false,
+      tabOffsetTop: 0,
+      isFixed: false
     }
   },
   created(){
@@ -159,6 +81,25 @@ export default {
     this.getHomeGoods('pop')
     this.getHomeGoods('new')
     this.getHomeGoods('sell')
+
+    // this.$bus.$on('itemImageLoad',() => {
+    //   this.$refs.scroll.refresh()
+    // })
+  },
+  mounted() {
+    const refresh = debounce(this.$refs.scroll.refresh, 500)
+
+    this.$bus.$on('itemImageLoad',() => {
+      // console.log('-----');
+      // this.$refs.scroll.refresh()
+      refresh()
+    })
+
+    // setTimeout(() => {
+    //   this.tabOffsetTop = this.$refs.tab.$el.offsetTop
+    //   console.log(this.tabOffsetTop);
+    // }, 200)
+
   },
   methods: {
     getHomeMultiData(){
@@ -172,11 +113,48 @@ export default {
     getHomeGoods(type){
       const page = this.goods[type].page + 1
       getHomeGoods(type, page).then(res => {
-        console.log(res);
+        //console.log(res);
         this.goods[type].list.push(...res.data.list)
+
+        this.$refs.scroll.scroll.finishPullUp()
       })
 
       this.goods[type].page = page
+    },
+
+    itemClick(index){
+      // console.log(index);
+      const titles = ['pop', 'new', 'sell']
+      this.currentType = titles[index]
+      this.$refs.tab.currentIndex = index
+      this.$refs.tabControl1.currentIndex = index
+    },
+    backClick(){
+      this.$refs.scroll.scrollTo(0, 0)
+    },
+    scroll(position){
+      // console.log(position);
+      this.isShow = -position.y > 1000
+      this.isFixed = -position.y > this.tabOffsetTop
+    },
+    pullingUp(){
+      this.getHomeGoods(this.currentType)
+    },
+    // debounce(func, delay){
+    //   let timer = null
+    //
+    //   return function (...args){
+    //     if(timer) clearTimeout(timer)
+    //
+    //     timer = setTimeout(() => {
+    //       func.apply(this, args)
+    //     }, delay)
+    //   }
+    // }
+    swiperImageLoad(){
+      // console.log('------');
+      this.tabOffsetTop = this.$refs.tab.$el.offsetTop
+      console.log(this.tabOffsetTop);
     }
   }
 }
@@ -184,22 +162,55 @@ export default {
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    /*padding-top: 44px;*/
+    height: 100vh;
+
+    position: relative;
   }
 
   .home-nav{
     background-color: var(--color-tint);
     color: #fff;
 
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
+    /*position: fixed;*/
+    /*left: 0;*/
+    /*right: 0;*/
+    /*top: 0;*/
+    /*z-index: 9;*/
+  }
+
+  .tabcontrol{
+    position: relative;
     z-index: 9;
   }
 
-  .tab-control {
-    position: sticky;
+  /*.tab-control {*/
+  /*  position: sticky;*/
+  /*  top: 44px;*/
+  /*  z-index: 9;*/
+  /*}*/
+
+  /*.fixed{*/
+  /*  position: fixed;*/
+  /*  top: 44px;*/
+  /*  left: 0;*/
+  /*  right: 0;*/
+  /*}*/
+
+  .home-scroll{
+    /*height: 300px;*/
+    overflow: hidden;
+
+    position: absolute;
     top: 44px;
+    bottom: 49px;
+    left: 0;
+    right: 0;
   }
+
+  /*.home-scroll {*/
+  /*  height: calc(100% - 93px);*/
+  /*  overflow: hidden;*/
+  /*  margin-top: 44px;*/
+  /*}*/
 </style>
