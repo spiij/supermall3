@@ -1,28 +1,28 @@
 <template>
 <div id="home">
   <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-  <tab-control class="tab-control tabcontrol"
+  <tab-control class="tabcontrol"
                :title="['流行', '精选', '新款']"
-               @itemClick="itemClick"
+               @tabItemClick="tabClick"
                v-show="isFixed" ref="tabControl1"/>
 
   <scroll class="home-scroll"
           ref="scroll"
           :probe-type="3"
           @scroll="scroll"
-          @pullingUp="pullingUp" :pull-up-load="true">
+          @pullingUp="pullingUp"
+          :pull-up-load="true">
     <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"></home-swiper>
     <recommend-view :recommends="recommends"/>
     <feature-view/>
-    <tab-control class="tab-control"
-                 :title="['流行', '精选', '新款']"
-                 @itemClick="itemClick"
+    <tab-control :title="['流行', '精选', '新款']"
+                 @tabItemClick="tabClick"
                  ref="tab"/>
 
     <goods-list :goods="goods[currentType].list"/>
   </scroll>
 
-  <back-top @click.native="backClick" v-show="isShow"/>
+  <back-top @click.native="backClick" v-show="isBackTopShow"/>
 </div>
 </template>
 
@@ -43,6 +43,8 @@ import GoodsList from "../../components/content/goods/GoodsList";
 import { getHomeMultiData, getHomeGoods } from "../../network/home";
 
 import { debounce } from "../../common/utils";
+
+import {itemListnerMixin} from "../../common/mixin";
 
 export default {
   name: "Home",
@@ -70,9 +72,11 @@ export default {
         'sell': {page: 0, list: []}
       },
       currentType: 'pop',
-      isShow: false,
+      isBackTopShow: false,
       tabOffsetTop: 0,
-      isFixed: false
+      isFixed: false,
+      positionY: 0,
+      // itemImgListner: null
     }
   },
   created(){
@@ -86,20 +90,35 @@ export default {
     //   this.$refs.scroll.refresh()
     // })
   },
-  mounted() {
-    const refresh = debounce(this.$refs.scroll.refresh, 500)
+  mixins: [itemListnerMixin],
+  // mounted() {
+  //   const refresh = debounce(this.$refs.scroll.refresh, 500)
+  //
+  //   this.homeImageLoad = () => {
+  //     // console.log('-----');
+  //     // this.$refs.scroll.refresh()
+  //     refresh()
+  //   }
+  //   this.$bus.$on('itemImageLoad', this.homeImageLoad)
+  //
+  //   // setTimeout(() => {
+  //   //   this.tabOffsetTop = this.$refs.tab.$el.offsetTop
+  //   //   console.log(this.tabOffsetTop);
+  //   // }, 200)
+  //
+  // },
+  destroyed() {
+    console.log('destroyed');
+  },
+  deactivated() {
+    // console.log(this.$refs.scroll.scroll.y);
+    this.positionY = this.$refs.scroll.scroll.y
+    this.$refs.scroll.refresh()
 
-    this.$bus.$on('itemImageLoad',() => {
-      // console.log('-----');
-      // this.$refs.scroll.refresh()
-      refresh()
-    })
-
-    // setTimeout(() => {
-    //   this.tabOffsetTop = this.$refs.tab.$el.offsetTop
-    //   console.log(this.tabOffsetTop);
-    // }, 200)
-
+    this.$bus.$off('itemImageLoad', this.homeImageLoad)
+  },
+  activated() {
+    this.$refs.scroll.scrollTo(0, this.positionY, 0)
   },
   methods: {
     getHomeMultiData(){
@@ -122,7 +141,7 @@ export default {
       this.goods[type].page = page
     },
 
-    itemClick(index){
+    tabClick(index){
       // console.log(index);
       const titles = ['pop', 'new', 'sell']
       this.currentType = titles[index]
@@ -134,7 +153,7 @@ export default {
     },
     scroll(position){
       // console.log(position);
-      this.isShow = -position.y > 1000
+      this.isBackTopShow = -position.y > 1000
       this.isFixed = -position.y > this.tabOffsetTop
     },
     pullingUp(){
@@ -154,7 +173,7 @@ export default {
     swiperImageLoad(){
       // console.log('------');
       this.tabOffsetTop = this.$refs.tab.$el.offsetTop
-      console.log(this.tabOffsetTop);
+      // console.log(this.tabOffsetTop);
     }
   }
 }

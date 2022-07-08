@@ -12,7 +12,6 @@ export default {
   props: {
     path: {
       type: String,
-      default: ''
     },
     activeColor: {
       type: String,
@@ -34,9 +33,9 @@ export default {
   },
   methods: {
     itemClick(){
-      console.log('itemClick');
-      this.isActive = !this.isActive
-      this.$router.replace(this.path)
+      // console.log('itemClick');
+      //this.isActive = !this.isActive
+      this.$router.push(this.path)
     }
   }
 }
