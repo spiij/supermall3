@@ -1,15 +1,15 @@
 <template>
 <div id="detail">
-  <detail-nav-bar></detail-nav-bar>
-  <scroll class="content" ref="scroll">
+  <detail-nav-bar @titleClick="titleClick" ref="detailNavBar"></detail-nav-bar>
+  <scroll class="content" ref="scroll" :probe-type="3" @scroll="detailScroll">
     <detail-swiper :top-images="topImages"/>
     <detail-base-info :goods="goods"/>
     <detail-shop-info :shop="shop"/>
     <detail-goods-info :detail-info="detailInfo"
                        @detailImageLoad="detailImageLoad"/>
-    <detail-param-info :param-info="goodsParam"/>
-    <detail-comment-info :comment-info="commentInfo"/>
-    <goods-list :goods="recommends"/>
+    <detail-param-info ref="paramInfo" :param-info="goodsParam"/>
+    <detail-comment-info ref="commentInfo" :comment-info="commentInfo"/>
+    <goods-list ref="recommendInfo" :goods="recommends"/>
   </scroll>
 
 </div>
@@ -49,6 +49,9 @@ export default {
       commentInfo: {},
       recommends: [],
       // itemImgListner: null
+      positionY: [],
+      getThemeY: null,
+      currentIndex: 0
     }
   },
   created(){
@@ -74,9 +77,20 @@ export default {
     })
 
     getRecommend().then(res => {
-      console.log(res);
+      // console.log(res);
       this.recommends = res.data.list
     })
+
+    this.getThemeY = debounce(() => {
+      this.positionY.push(0, this.$refs.paramInfo.$el.offsetTop,
+          this.$refs.commentInfo.$el.offsetTop,
+          this.$refs.recommendInfo.$el.offsetTop)
+
+      this.positionY.push(Number.MAX_VALUE)
+      console.log(this.positionY)
+    }, 200)
+
+
   },
   mounted() {
     // const refresh = debounce(this.$refs.scroll.refresh, 300)
@@ -86,6 +100,11 @@ export default {
     // }
     //
     // this.$bus.$on('itemImageLoad', this.itemImgListner)
+
+    // this.positionY.push(0, this.$refs.paramInfo.$el.offsetTop,
+    //     this.$refs.commentInfo.$el.offsetTop,
+    //     this.$refs.recommendInfo.$el.offsetTop)
+    // console.log(this.positionY)
   },
   mixins:[itemListnerMixin],
   deactivated() {
@@ -110,6 +129,53 @@ export default {
   methods: {
     detailImageLoad(){
       this.$refs.scroll.refresh()
+
+      this.getThemeY()
+    },
+    titleClick(index){
+      console.log(index);
+      this.$refs.scroll.scrollTo(0, -this.positionY[index], 300)
+    },
+    detailScroll(position){
+
+      const y = -position.y
+      const len = this.positionY.length
+
+      for(let i = 0; i < len; i++){
+        if((i < len - 1 && y >= this.positionY[i] && y < this.positionY[i + 1]) || (i = len - 1 && y >= this.positionY[i])){
+          this.currentIndex = i
+          console.log(i)
+        }
+      }
+
+      // for(let i = 0; i < 5; i++){
+      //   if(this.positionY[i] <= y < this.positionY[i+1]){
+      //     this.$refs.detailNavBar.currentIndex = i
+      //   }
+      // }
+
+
+      // if(this.positionY[0] <= y && y < this.positionY[1]){
+      //   // console.log(position.y);
+      //   this.$refs.detailNavBar.currentIndex = 0
+      //   // console.log(this.$refs.detailNavBar.currentIndex);
+      // }
+      //
+      // if(this.positionY[1] <= y && y < this.positionY[2]){
+      //   this.$refs.detailNavBar.currentIndex = 1
+      //   console.log(this.$refs.detailNavBar.currentIndex);
+      // }
+      //
+      // if(this.positionY[2] <= y && y < this.positionY[3]){
+      //   this.$refs.detailNavBar.currentIndex = 2
+      //   console.log(this.$refs.detailNavBar.currentIndex);
+      // }
+      //
+      // if(this.positionY[3] <= y && y < this.positionY[4]){
+      //   this.$refs.detailNavBar.currentIndex = 3
+      //   console.log(this.$refs.detailNavBar.currentIndex);
+      // }
+      // console.log(position);
     }
   }
 }

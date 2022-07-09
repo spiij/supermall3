@@ -31,7 +31,8 @@ export default {
   methods: {
     titleClick(index){
       this.currentIndex = index
-      console.log('titleClick', index);
+      // console.log('titleClick', index);
+      this.$emit('titleClick', index)
     },
     backClick(){
       this.$router.back()
